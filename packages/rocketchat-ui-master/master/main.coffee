@@ -1,3 +1,5 @@
+`import Clipboard from 'clipboard';`
+
 Template.body.onRendered ->
 	clipboard = new Clipboard('.clipboard')
 
@@ -32,6 +34,11 @@ Template.body.onRendered ->
 		if link.origin is s.rtrim(Meteor.absoluteUrl(), '/') and /msg=([a-zA-Z0-9]+)/.test(link.search)
 			e.preventDefault()
 			e.stopPropagation()
+
+			if RocketChat.Layout.isEmbedded()
+				fireGlobalEvent('click-message-link', { link: link.pathname + link.search })
+				return window.open(link.pathname + link.search)
+
 			FlowRouter.go(link.pathname + link.search)
 
 	Tracker.autorun (c) ->
@@ -138,7 +145,9 @@ Template.main.helpers
 		return RocketChat.iframeLogin.reactiveIframeUrl.get()
 
 	subsReady: ->
-		return not Meteor.userId()? or (FlowRouter.subsReady('userData', 'activeUsers'))
+		ready = not Meteor.userId()? or (FlowRouter.subsReady('userData', 'activeUsers') and CachedChatSubscription.ready.get())
+		RocketChat.CachedCollectionManager.syncEnabled = ready
+		return ready
 
 	hasUsername: ->
 		return Meteor.userId()? and Meteor.user().username?
@@ -163,6 +172,9 @@ Template.main.helpers
 
 	CustomScriptLoggedIn: ->
 		RocketChat.settings.get 'Custom_Script_Logged_In'
+
+	embeddedVersion: ->
+		return 'embedded-view' if RocketChat.Layout.isEmbedded()
 
 
 Template.main.events

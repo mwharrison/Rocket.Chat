@@ -28,6 +28,18 @@ RocketChat.models.Users.findOnlineAgents = function() {
 };
 
 /**
+ * Gets all agents
+ * @return
+ */
+RocketChat.models.Users.findAgents = function() {
+	var query = {
+		roles: 'livechat-agent'
+	};
+
+	return this.find(query);
+};
+
+/**
  * Find online users from a list
  * @param {array} userList - array of usernames
  * @return
@@ -123,6 +135,26 @@ RocketChat.models.Users.setLivechatStatus = function(userId, status) {
 	};
 
 	return this.update(query, update);
+};
+
+/**
+ * change all livechat agents livechat status to "not-available"
+ */
+RocketChat.models.Users.closeOffice = function() {
+	self = this;
+	self.findAgents().forEach(function(agent) {
+		self.setLivechatStatus(agent._id, 'not-available');
+	});
+};
+
+/**
+ * change all livechat agents livechat status to "available"
+ */
+RocketChat.models.Users.openOffice = function() {
+	self = this;
+	self.findAgents().forEach(function(agent) {
+		self.setLivechatStatus(agent._id, 'available');
+	});
 };
 
 RocketChat.models.Users.updateLivechatDataByToken = function(token, key, value) {
