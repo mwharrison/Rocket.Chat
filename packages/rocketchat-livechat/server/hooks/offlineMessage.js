@@ -3,7 +3,7 @@ RocketChat.callbacks.add('livechat.offlineMessage', (data) => {
 		return data;
 	}
 
-	let postData = {
+	const postData = {
 		type: 'LivechatOfflineMessage',
 		sentAt: new Date(),
 		visitor: {
@@ -14,4 +14,4 @@ RocketChat.callbacks.add('livechat.offlineMessage', (data) => {
 	};
 
 	RocketChat.Livechat.sendRequest(postData);
-});
+}, RocketChat.callbacks.priority.MEDIUM, 'livechat-send-email-offline-message');

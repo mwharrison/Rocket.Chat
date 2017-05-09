@@ -1,4 +1,5 @@
-/* globals Department, Livechat */
+/* globals Department, Livechat, LivechatVideoCall */
+
 Template.livechatWindow.helpers({
 	title() {
 		return Livechat.title;
@@ -21,6 +22,9 @@ Template.livechatWindow.helpers({
 		}
 		return Livechat.registrationForm;
 	},
+	showSwitchDepartmentForm() {
+		return Livechat.showSwitchDepartmentForm;
+	},
 	livechatStarted() {
 		return Livechat.online !== null;
 	},
@@ -37,6 +41,15 @@ Template.livechatWindow.helpers({
 			offlineUnavailableMessage: Livechat.offlineUnavailableMessage.replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1<br>$2'),
 			displayOfflineForm: Livechat.displayOfflineForm
 		};
+	},
+	videoCalling() {
+		return LivechatVideoCall.isActive();
+	},
+	isOpened() {
+		return Livechat.isWidgetOpened();
+	},
+	showWidget() {
+		return Livechat.online || Livechat.displayOfflineForm;
 	}
 });
 
@@ -57,9 +70,11 @@ Template.livechatWindow.events({
 Template.livechatWindow.onCreated(function() {
 	Session.set({sound: true});
 
+	const availableLanguages = TAPi18n.getLanguages();
+
 	const defaultAppLanguage = () => {
 		let lng = window.navigator.userLanguage || window.navigator.language || 'en';
-		let regexp = /([a-z]{2}-)([a-z]{2})/;
+		const regexp = /([a-z]{2}-)([a-z]{2})/;
 		if (regexp.test(lng)) {
 			lng = lng.replace(regexp, function(match, ...parts) {
 				return parts[0] + parts[1].toUpperCase();
@@ -91,16 +106,27 @@ Template.livechatWindow.onCreated(function() {
 				Livechat.title = result.title;
 				Livechat.onlineColor = result.color;
 				Livechat.online = true;
+				Livechat.transcript = result.transcript;
+				Livechat.transcriptMessage = result.transcriptMessage;
 			}
+			Livechat.videoCall = result.videoCall;
 			Livechat.registrationForm = result.registrationForm;
 
 			if (result.room) {
-				RoomHistoryManager.getMoreIfIsEmpty(result.room._id);
-				visitor.subscribeToRoom(result.room._id);
-				visitor.setRoom(result.room._id);
+				Livechat.room = result.room._id;
 			}
 
-			TAPi18n.setLanguage((result.language || defaultAppLanguage()).split('-').shift());
+			if (result.agentData) {
+				Livechat.agent = result.agentData;
+			}
+
+			let language = result.language || defaultAppLanguage();
+
+			if (!availableLanguages[language]) {
+				language = language.split('-').shift();
+			}
+
+			TAPi18n.setLanguage(language);
 
 			Triggers.setTriggers(result.triggers);
 			Triggers.init();
@@ -108,6 +134,14 @@ Template.livechatWindow.onCreated(function() {
 			result.departments.forEach((department) => {
 				Department.insert(department);
 			});
+			Livechat.allowSwitchingDepartments = result.allowSwitchingDepartments;
+			Livechat.ready();
+		}
+	});
+
+	$(window).on('focus', () => {
+		if (Livechat.isWidgetOpened()) {
+			$('textarea').focus();
 		}
 	});
 });
